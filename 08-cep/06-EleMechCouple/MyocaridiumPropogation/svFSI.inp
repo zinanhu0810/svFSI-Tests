@@ -1,0 +1,86 @@
+#----------------------------------------------------------------
+# General simulation parameters
+
+Continue previous simulation: 0
+Number of spatial dimensions: 3
+Number of time steps: 20000
+Time step size: 0.01
+Spectral radius of infinite time step: 0.50
+Searched file name to trigger stop: STOP_SIM
+
+Save results to VTK format: 1
+Name prefix of saved VTK files: result
+Increment in saving VTK files: 50
+Start saving after time step: 1
+
+Increment in saving restart files: 50
+Convert BIN to VTK format: 0
+
+Verbose: 1
+Warning: 1
+Debug: 0
+
+#----------------------------------------------------------------
+# Mesh data
+Add mesh: msh {
+   Mesh file path:     mesh_tube_fsi/solid/mesh-complete.mesh.vtu
+   Add face: endo {
+      Face file path: mesh_tube_fsi/solid/mesh-surfaces/interface.vtp
+   }
+   Add face: epi {
+      Face file path: mesh_tube_fsi/solid/mesh-surfaces/outside.vtp
+   }
+   Add face: start {
+      Face file path: mesh_tube_fsi/solid/mesh-surfaces/start.vtp
+   }
+   Add face: end {
+      Face file path: mesh_tube_fsi/solid/mesh-surfaces/end.vtp
+   }
+  # Fiber direction file path: mesh_tube_fsi/solid/fibersLong.vtu
+  # Fiber direction file path: mesh_tube_fsi/solid/fibersSheet.vtu
+   Fiber direction: (0,0,1)
+   Domain file path: ./mesh_tube_fsi/domain_myocardium.dat
+}
+
+#----------------------------------------------------------------
+# Equations
+Add equation: CEP {
+   Coupled: 1
+   Min iterations: 3
+   Max iterations: 10
+   Tolerance: 1e-4
+
+   Domain: 3 {
+      Electrophysiology model: TTP
+      Conductivity (iso): 0.052571
+      Conductivity (ani): 0.082715
+      ODE solver: RK
+   }
+
+
+   Domain: 2 {
+      Electrophysiology model: TTP
+      Conductivity (iso): 0.052571
+      Conductivity (ani): 0.082715
+      Stimulus: Istim {
+         Amplitude: -157.14
+         Start time: 0.0
+         Duration: 10.0
+         Cycle length: 20.0
+      }
+      ODE solver: RK
+   }
+
+   
+   Output: Spatial {
+      Action_potential: t
+   }
+
+   LS type: GMRES
+   {
+      Max iterations:      100
+      Tolerance:           1D-6
+      Krylov space dimension: 50
+   }
+}
+
