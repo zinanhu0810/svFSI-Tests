@@ -1,0 +1,177 @@
+#----------------------------------------------------------------
+# General simulation parameters
+
+Continue previous simulation: 1
+Number of spatial dimensions: 3
+Number of time steps: 200
+Time step size: 0.05
+Spectral radius of infinite time step: 0.50
+Searched file name to trigger stop: STOP_SIM
+
+Save results to VTK format: 1
+Name prefix of saved VTK files: result
+Increment in saving VTK files: 1
+Start saving after time step: 1
+
+Increment in saving restart files: 1
+Convert BIN to VTK format: 0
+
+Verbose: 1
+Warning: 0
+Debug: 0
+
+#----------------------------------------------------------------
+# Mesh data
+Add mesh: myocardiuim_e {
+   Mesh file path: mesh/mesh-complete.mesh.vtu
+   Add face: endo_e { 
+      Face file path: mesh/interface.vtp
+   }
+
+   Domain file path: mesh/domain_myocardium_e.dat
+   Mesh scale factor: 1.0
+}
+
+Add mesh: myocardium_m {
+   Mesh file path: mesh/mesh-complete.mesh.vtu
+   Add face: endo_m {
+      Face file path: mesh/interface.vtp
+   }
+   Add face: epi_m {
+      Face file path: mesh/outside.vtp
+   }
+   Add face: start_m {
+      Face file path: mesh/start.vtp
+   }
+   Add face: end_m {
+      Face file path: mesh/end.vtp
+   }
+
+   Fiber direction file path: mesh_tube_fsi/solid/fibersLong.vtu
+   Fiber direction file path: mesh_tube_fsi/solid/fibersSheet.vtu
+
+   Domain: 3
+   #Domain file path: mesh/domain_myocardium_m.dat
+   Mesh scale factor: 1.0
+}
+
+Add projection: endo_m{
+   Project from face: endo_e
+   Projection tolerance: -1
+} 
+#----------------------------------------------------------------
+# Equations
+Add equation: CEP {
+   Coupled: 1
+   Coupling with mechanics: active_stress
+
+   # Parameters for the nonlinear (Newton) solver
+   Min iterations: 1
+   Max iterations: 3
+   Tolerance: 1e-6
+
+   # Domain 1 consists of regular conducting myocytes
+   Domain: 1 {
+      # We use tenTusscher-Panfilov model
+      Electrophysiology model: TTP
+
+      Myocardial zone: pfib
+
+      # Isotropic conductivity
+      Conductivity (iso): 0.032571
+      Conductivity (ani): 0.012715
+      # Time integrator
+      ODE solver: RK
+   }
+
+   # Domain 2 comprises pacemaker cells which need
+   # information on external stimulus
+   Domain: 2 {
+      # We use tenTusscher-Panfilov model
+      Electrophysiology model: TTP
+
+      Myocardial zone: pfib
+
+      # Isotropic conductivity
+      Conductivity (iso): 0.0312571
+      Conductivity (ani): 0.012715
+
+      # Time integrator
+      ODE solver: RK
+
+      # Details of external stimulus
+      Stimulus: Istim {
+         Amplitude: -152.0
+         Start time: 0.0
+         Duration: 10
+         Cycle length: 100.0
+      }
+   }
+   Output: Spatial {
+      Action_potential: t
+   }
+}
+
+Add equation: ustruct {
+   Coupled: 0
+
+   # Parameters for the nonlinear (Newton) solver
+   Min iterations: 1
+   Max iterations: 3
+   Tolerance: 1e-3
+   Use Taylor-Hood type basis: f
+
+   Domain: 3{
+     Density: 1e-3
+     Elasticity modulus: 2.0e5  # used for computing tauM/tauC
+     Poisson ratio: 0.1
+     Momentum stabilization coefficient: 1e-3
+
+     Constitutive model: Gucci {
+        C:   2.0e3
+        bf:  8.0
+        bt:  2.0
+        bfs: 4.0
+     }
+     #Fiber reinforcement stress: Unsteady {
+     #  Temporal values file path: fib_stress2.dat
+     #  Ramp function: f
+     #}
+   }
+   Output: Spatial {
+      Displacement: t
+      Velocity: t
+      Pressure: t
+      Acceleration: f
+      Stress: t
+      Cauchy_stress: f
+      VonMises_stress: f
+      Def_grad: f
+      Strain: f
+      Jacobian: f
+    }
+
+   # Linear solver parameters
+   LS type: GMRES
+   {
+      Max iterations:      100
+      Tolerance:           1D-6
+      Krylov space dimension: 50
+   }
+
+   Add BC: start_m{
+      Type: Dir
+      Value: 0.0
+   }
+   Add BC: end_m {
+      Type: Dir
+      Value: 0.0
+   }
+
+   Add BC: epi_m {
+      Type: Neu
+      Time dependence: Steady
+      Value: 0.0
+   }
+
+}
